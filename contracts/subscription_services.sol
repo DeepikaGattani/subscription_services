@@ -55,10 +55,6 @@ contract Project {
 
     /**
      * @dev Creates a new subscription plan
-     * @param _name Name of the subscription plan
-     * @param _description Description of the subscription plan
-     * @param _price Price in wei for the subscription
-     * @param _duration Duration in seconds for the subscription
      */
     function createSubscriptionPlan(
         string memory _name,
@@ -84,20 +80,16 @@ contract Project {
 
     /**
      * @dev Allows users to subscribe to a plan
-     * @param _planId ID of the subscription plan to purchase
      */
     function subscribe(uint256 _planId) external payable validPlan(_planId) {
         Subscription memory plan = subscriptionPlans[_planId];
         require(msg.value >= plan.price, "Insufficient payment");
 
         UserSubscription storage userSub = userSubscriptions[msg.sender];
-        
-        // Check if user already has an active subscription
         if (userSub.isActive && block.timestamp < userSub.endTime) {
             revert("User already has an active subscription");
         }
 
-        // Set up new subscription
         userSub.planId = _planId;
         userSub.startTime = block.timestamp;
         userSub.endTime = block.timestamp + plan.duration;
@@ -106,7 +98,6 @@ contract Project {
 
         totalRevenue += plan.price;
 
-        // Refund excess payment
         if (msg.value > plan.price) {
             payable(msg.sender).transfer(msg.value - plan.price);
         }
@@ -120,17 +111,14 @@ contract Project {
     function renewSubscription() external payable {
         UserSubscription storage userSub = userSubscriptions[msg.sender];
         require(userSub.isActive, "No active subscription found");
-        
+
         Subscription memory plan = subscriptionPlans[userSub.planId];
         require(plan.active, "Subscription plan is no longer active");
         require(msg.value >= plan.price, "Insufficient payment for renewal");
 
-        // Extend subscription duration
         if (block.timestamp < userSub.endTime) {
-            // Still active, extend from current end time
             userSub.endTime += plan.duration;
         } else {
-            // Expired, start from current time
             userSub.startTime = block.timestamp;
             userSub.endTime = block.timestamp + plan.duration;
         }
@@ -138,7 +126,6 @@ contract Project {
         userSub.renewalCount++;
         totalRevenue += plan.price;
 
-        // Refund excess payment
         if (msg.value > plan.price) {
             payable(msg.sender).transfer(msg.value - plan.price);
         }
@@ -154,14 +141,12 @@ contract Project {
         require(userSub.isActive, "No active subscription found");
 
         userSub.isActive = false;
-        
+
         emit SubscriptionCancelled(msg.sender, userSub.planId);
     }
 
     /**
      * @dev Check if a user's subscription is currently active
-     * @param _user Address of the user to check
-     * @return bool indicating if subscription is active
      */
     function isSubscriptionActive(address _user) external view returns (bool) {
         UserSubscription memory userSub = userSubscriptions[_user];
@@ -170,8 +155,6 @@ contract Project {
 
     /**
      * @dev Get subscription details for a user
-     * @param _user Address of the user
-     * @return UserSubscription struct with subscription details
      */
     function getUserSubscription(address _user) external view returns (UserSubscription memory) {
         return userSubscriptions[_user];
@@ -179,8 +162,6 @@ contract Project {
 
     /**
      * @dev Get subscription plan details
-     * @param _planId ID of the subscription plan
-     * @return Subscription struct with plan details
      */
     function getSubscriptionPlan(uint256 _planId) external view returns (Subscription memory) {
         require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
@@ -189,7 +170,6 @@ contract Project {
 
     /**
      * @dev Toggle subscription plan active status
-     * @param _planId ID of the subscription plan
      */
     function togglePlanStatus(uint256 _planId) external onlyOwner {
         require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
@@ -202,14 +182,13 @@ contract Project {
     function withdrawFunds() external onlyOwner {
         uint256 balance = address(this).balance;
         require(balance > 0, "No funds to withdraw");
-        
+
         payable(owner).transfer(balance);
         emit FundsWithdrawn(owner, balance);
     }
 
     /**
      * @dev Get contract balance
-     * @return uint256 current contract balance
      */
     function getContractBalance() external view returns (uint256) {
         return address(this).balance;
@@ -217,7 +196,6 @@ contract Project {
 
     /**
      * @dev Get total number of subscription plans
-     * @return uint256 total number of plans created
      */
     function getTotalPlans() external view returns (uint256) {
         return planCounter;
@@ -225,11 +203,33 @@ contract Project {
 
     /**
      * @dev Transfer ownership of the contract
-     * @param _newOwner Address of the new owner
      */
     function transferOwnership(address _newOwner) external onlyOwner {
         require(_newOwner != address(0), "New owner cannot be zero address");
         owner = _newOwner;
+    }
+
+    /**
+     * @dev Get all active subscription plans
+     */
+    function getAllActivePlans() external view returns (Subscription[] memory activePlans) {
+        uint256 count = 0;
+
+        for (uint256 i = 1; i <= planCounter; i++) {
+            if (subscriptionPlans[i].active) {
+                count++;
+            }
+        }
+
+        activePlans = new Subscription[](count);
+        uint256 index = 0;
+
+        for (uint256 i = 1; i <= planCounter; i++) {
+            if (subscriptionPlans[i].active) {
+                activePlans[index] = subscriptionPlans[i];
+                index++;
+            }
+        }
     }
 
     // Fallback function to receive Ether
