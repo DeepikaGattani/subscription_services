@@ -206,6 +206,32 @@ contract Project {
         return userSub.endTime - block.timestamp;
     }
 
+    /**
+     * @dev Get detailed subscription status for a user
+     */
+    function getUserSubscriptionStatus(address _user)
+        external
+        view
+        returns (
+            string memory planName,
+            bool isActive,
+            uint256 timeLeft,
+            uint256 renewalCount
+        )
+    {
+        UserSubscription memory userSub = userSubscriptions[_user];
+
+        if (!userSub.isActive || block.timestamp >= userSub.endTime) {
+            return ("No Active Plan", false, 0, userSub.renewalCount);
+        }
+
+        Subscription memory plan = subscriptionPlans[userSub.planId];
+        planName = plan.name;
+        isActive = true;
+        timeLeft = userSub.endTime - block.timestamp;
+        renewalCount = userSub.renewalCount;
+    }
+
     // Fallback function to receive Ether
     receive() external payable {}
 }
