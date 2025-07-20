@@ -232,6 +232,29 @@ contract Project {
         renewalCount = userSub.renewalCount;
     }
 
+    /**
+     * @dev Returns basic subscription history of a user
+     */
+    function getUserSubscriptionHistory(address _user)
+        external
+        view
+        returns (
+            uint256 planId,
+            uint256 totalDuration,
+            uint256 renewals
+        )
+    {
+        UserSubscription memory userSub = userSubscriptions[_user];
+        planId = userSub.planId;
+        renewals = userSub.renewalCount;
+
+        if (userSub.startTime == 0 || userSub.endTime == 0) {
+            totalDuration = 0;
+        } else {
+            totalDuration = userSub.endTime - userSub.startTime;
+        }
+    }
+
     // Fallback function to receive Ether
     receive() external payable {}
 }
