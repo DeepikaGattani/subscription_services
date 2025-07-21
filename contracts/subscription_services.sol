@@ -255,6 +255,20 @@ contract Project {
         }
     }
 
+    /**
+     * @dev Returns the name of the current subscription plan of the user
+     */
+    function getUserPlanName(address _user) external view returns (string memory) {
+        UserSubscription memory userSub = userSubscriptions[_user];
+
+        if (!userSub.isActive || block.timestamp >= userSub.endTime) {
+            return "No Active Plan";
+        }
+
+        Subscription memory plan = subscriptionPlans[userSub.planId];
+        return plan.name;
+    }
+
     // Fallback function to receive Ether
     receive() external payable {}
 }
