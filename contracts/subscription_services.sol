@@ -193,9 +193,6 @@ contract Project {
         }
     }
 
-    /**
-     * @dev Get remaining time (in seconds) for user's active subscription
-     */
     function getUserRemainingTime(address _user) external view returns (uint256) {
         UserSubscription memory userSub = userSubscriptions[_user];
 
@@ -206,9 +203,6 @@ contract Project {
         return userSub.endTime - block.timestamp;
     }
 
-    /**
-     * @dev Get detailed subscription status for a user
-     */
     function getUserSubscriptionStatus(address _user)
         external
         view
@@ -232,9 +226,6 @@ contract Project {
         renewalCount = userSub.renewalCount;
     }
 
-    /**
-     * @dev Returns basic subscription history of a user
-     */
     function getUserSubscriptionHistory(address _user)
         external
         view
@@ -255,9 +246,6 @@ contract Project {
         }
     }
 
-    /**
-     * @dev Returns the name of the current subscription plan of the user
-     */
     function getUserPlanName(address _user) external view returns (string memory) {
         UserSubscription memory userSub = userSubscriptions[_user];
 
@@ -267,6 +255,39 @@ contract Project {
 
         Subscription memory plan = subscriptionPlans[userSub.planId];
         return plan.name;
+    }
+
+    /**
+     * @dev Returns detailed user subscription data in one call
+     */
+    function getAllUserData(address _user)
+        external
+        view
+        returns (
+            string memory planName,
+            string memory description,
+            bool isActive,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 remainingTime,
+            uint256 renewalCount
+        )
+    {
+        UserSubscription memory userSub = userSubscriptions[_user];
+
+        if (!userSub.isActive || block.timestamp >= userSub.endTime) {
+            return ("No Active Plan", "", false, 0, 0, 0, userSub.renewalCount);
+        }
+
+        Subscription memory plan = subscriptionPlans[userSub.planId];
+
+        planName = plan.name;
+        description = plan.description;
+        isActive = true;
+        startTime = userSub.startTime;
+        endTime = userSub.endTime;
+        remainingTime = endTime - block.timestamp;
+        renewalCount = userSub.renewalCount;
     }
 
     // Fallback function to receive Ether
