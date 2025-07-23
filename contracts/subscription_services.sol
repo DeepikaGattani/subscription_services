@@ -30,6 +30,8 @@ contract Project {
     mapping(address => UserSubscription) public userSubscriptions;
     mapping(address => uint256) public userBalances;
 
+    address[] private subscribers; // Added to track all subscribers
+
     event SubscriptionPlanCreated(uint256 indexed planId, string name, uint256 price, uint256 duration);
     event SubscriptionPurchased(address indexed user, uint256 indexed planId, uint256 endTime);
     event SubscriptionRenewed(address indexed user, uint256 indexed planId, uint256 newEndTime);
@@ -91,6 +93,18 @@ contract Project {
         userSub.renewalCount = 0;
 
         totalRevenue += plan.price;
+
+        // Track unique subscribers
+        bool isNewSubscriber = true;
+        for (uint i = 0; i < subscribers.length; i++) {
+            if (subscribers[i] == msg.sender) {
+                isNewSubscriber = false;
+                break;
+            }
+        }
+        if (isNewSubscriber) {
+            subscribers.push(msg.sender);
+        }
 
         if (msg.value > plan.price) {
             payable(msg.sender).transfer(msg.value - plan.price);
@@ -257,9 +271,6 @@ contract Project {
         return plan.name;
     }
 
-    /**
-     * @dev Returns detailed user subscription data in one call
-     */
     function getAllUserData(address _user)
         external
         view
@@ -288,6 +299,29 @@ contract Project {
         endTime = userSub.endTime;
         remainingTime = endTime - block.timestamp;
         renewalCount = userSub.renewalCount;
+    }
+
+    // ✅ New Function: Get all currently active subscribers
+    function getAllActiveSubscribers() external view onlyOwner returns (address[] memory activeUsers) {
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < subscribers.length; i++) {
+            UserSubscription memory userSub = userSubscriptions[subscribers[i]];
+            if (userSub.isActive && block.timestamp < userSub.endTime) {
+                count++;
+            }
+        }
+
+        activeUsers = new address[](count);
+        uint256 index = 0;
+
+        for (uint256 i = 0; i < subscribers.length; i++) {
+            UserSubscription memory userSub = userSubscriptions[subscribers[i]];
+            if (userSub.isActive && block.timestamp < userSub.endTime) {
+                activeUsers[index] = subscribers[i];
+                index++;
+            }
+        }
     }
 
     // Fallback function to receive Ether
