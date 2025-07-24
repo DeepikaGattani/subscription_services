@@ -30,7 +30,7 @@ contract Project {
     mapping(address => UserSubscription) public userSubscriptions;
     mapping(address => uint256) public userBalances;
 
-    address[] private subscribers; // Added to track all subscribers
+    address[] private subscribers;
 
     event SubscriptionPlanCreated(uint256 indexed planId, string name, uint256 price, uint256 duration);
     event SubscriptionPurchased(address indexed user, uint256 indexed planId, uint256 endTime);
@@ -94,7 +94,6 @@ contract Project {
 
         totalRevenue += plan.price;
 
-        // Track unique subscribers
         bool isNewSubscriber = true;
         for (uint i = 0; i < subscribers.length; i++) {
             if (subscribers[i] == msg.sender) {
@@ -189,7 +188,6 @@ contract Project {
 
     function getAllActivePlans() external view returns (Subscription[] memory activePlans) {
         uint256 count = 0;
-
         for (uint256 i = 1; i <= planCounter; i++) {
             if (subscriptionPlans[i].active) {
                 count++;
@@ -198,7 +196,6 @@ contract Project {
 
         activePlans = new Subscription[](count);
         uint256 index = 0;
-
         for (uint256 i = 1; i <= planCounter; i++) {
             if (subscriptionPlans[i].active) {
                 activePlans[index] = subscriptionPlans[i];
@@ -209,11 +206,9 @@ contract Project {
 
     function getUserRemainingTime(address _user) external view returns (uint256) {
         UserSubscription memory userSub = userSubscriptions[_user];
-
         if (!userSub.isActive || block.timestamp >= userSub.endTime) {
             return 0;
         }
-
         return userSub.endTime - block.timestamp;
     }
 
@@ -228,16 +223,12 @@ contract Project {
         )
     {
         UserSubscription memory userSub = userSubscriptions[_user];
-
         if (!userSub.isActive || block.timestamp >= userSub.endTime) {
             return ("No Active Plan", false, 0, userSub.renewalCount);
         }
 
         Subscription memory plan = subscriptionPlans[userSub.planId];
-        planName = plan.name;
-        isActive = true;
-        timeLeft = userSub.endTime - block.timestamp;
-        renewalCount = userSub.renewalCount;
+        return (plan.name, true, userSub.endTime - block.timestamp, userSub.renewalCount);
     }
 
     function getUserSubscriptionHistory(address _user)
@@ -252,23 +243,17 @@ contract Project {
         UserSubscription memory userSub = userSubscriptions[_user];
         planId = userSub.planId;
         renewals = userSub.renewalCount;
-
-        if (userSub.startTime == 0 || userSub.endTime == 0) {
-            totalDuration = 0;
-        } else {
-            totalDuration = userSub.endTime - userSub.startTime;
-        }
+        totalDuration = userSub.endTime > userSub.startTime
+            ? userSub.endTime - userSub.startTime
+            : 0;
     }
 
     function getUserPlanName(address _user) external view returns (string memory) {
         UserSubscription memory userSub = userSubscriptions[_user];
-
         if (!userSub.isActive || block.timestamp >= userSub.endTime) {
             return "No Active Plan";
         }
-
-        Subscription memory plan = subscriptionPlans[userSub.planId];
-        return plan.name;
+        return subscriptionPlans[userSub.planId].name;
     }
 
     function getAllUserData(address _user)
@@ -285,26 +270,24 @@ contract Project {
         )
     {
         UserSubscription memory userSub = userSubscriptions[_user];
-
         if (!userSub.isActive || block.timestamp >= userSub.endTime) {
             return ("No Active Plan", "", false, 0, 0, 0, userSub.renewalCount);
         }
 
         Subscription memory plan = subscriptionPlans[userSub.planId];
-
-        planName = plan.name;
-        description = plan.description;
-        isActive = true;
-        startTime = userSub.startTime;
-        endTime = userSub.endTime;
-        remainingTime = endTime - block.timestamp;
-        renewalCount = userSub.renewalCount;
+        return (
+            plan.name,
+            plan.description,
+            true,
+            userSub.startTime,
+            userSub.endTime,
+            userSub.endTime - block.timestamp,
+            userSub.renewalCount
+        );
     }
 
-    // ✅ New Function: Get all currently active subscribers
     function getAllActiveSubscribers() external view onlyOwner returns (address[] memory activeUsers) {
         uint256 count = 0;
-
         for (uint256 i = 0; i < subscribers.length; i++) {
             UserSubscription memory userSub = userSubscriptions[subscribers[i]];
             if (userSub.isActive && block.timestamp < userSub.endTime) {
@@ -314,7 +297,6 @@ contract Project {
 
         activeUsers = new address[](count);
         uint256 index = 0;
-
         for (uint256 i = 0; i < subscribers.length; i++) {
             UserSubscription memory userSub = userSubscriptions[subscribers[i]];
             if (userSub.isActive && block.timestamp < userSub.endTime) {
@@ -322,6 +304,11 @@ contract Project {
                 index++;
             }
         }
+    }
+
+    //  New Function: Get all subscribers (active or not)
+    function getAllSubscribers() external view onlyOwner returns (address[] memory) {
+        return subscribers;
     }
 
     // Fallback function to receive Ether
