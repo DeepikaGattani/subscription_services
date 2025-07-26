@@ -306,9 +306,31 @@ contract Project {
         }
     }
 
-    //  New Function: Get all subscribers (active or not)
     function getAllSubscribers() external view onlyOwner returns (address[] memory) {
         return subscribers;
+    }
+
+    // ✅ New Function: Get all subscribers for a specific plan
+    function getPlanSubscribers(uint256 _planId) external view onlyOwner returns (address[] memory) {
+        require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
+
+        uint256 count = 0;
+        for (uint256 i = 0; i < subscribers.length; i++) {
+            if (userSubscriptions[subscribers[i]].planId == _planId) {
+                count++;
+            }
+        }
+
+        address[] memory planSubscribers = new address[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < subscribers.length; i++) {
+            if (userSubscriptions[subscribers[i]].planId == _planId) {
+                planSubscribers[index] = subscribers[i];
+                index++;
+            }
+        }
+
+        return planSubscribers;
     }
 
     // Fallback function to receive Ether
