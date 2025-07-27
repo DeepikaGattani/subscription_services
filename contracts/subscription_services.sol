@@ -310,7 +310,7 @@ contract Project {
         return subscribers;
     }
 
-    // ✅ New Function: Get all subscribers for a specific plan
+    // ✅ Get all subscribers for a specific plan
     function getPlanSubscribers(uint256 _planId) external view onlyOwner returns (address[] memory) {
         require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
 
@@ -333,6 +333,22 @@ contract Project {
         return planSubscribers;
     }
 
-    // Fallback function to receive Ether
+    // ✅ New Function: Get total revenue from a specific plan
+    function getPlanRevenue(uint256 _planId) external view onlyOwner returns (uint256 revenue) {
+        require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
+
+        uint256 planPrice = subscriptionPlans[_planId].price;
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < subscribers.length; i++) {
+            if (userSubscriptions[subscribers[i]].planId == _planId) {
+                count += 1 + userSubscriptions[subscribers[i]].renewalCount;
+            }
+        }
+
+        revenue = count * planPrice;
+    }
+
+    // Fallback to receive Ether
     receive() external payable {}
 }
