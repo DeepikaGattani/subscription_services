@@ -146,6 +146,32 @@ contract Project {
         emit SubscriptionCancelled(msg.sender, userSub.planId);
     }
 
+    // ✅ New Function: Refund unused subscription time
+    function refundSubscription() external {
+        UserSubscription storage userSub = userSubscriptions[msg.sender];
+        require(userSub.isActive, "No active subscription to refund");
+
+        Subscription memory plan = subscriptionPlans[userSub.planId];
+        require(plan.active, "Plan is not active");
+
+        uint256 remainingTime = 0;
+        if (block.timestamp < userSub.endTime) {
+            remainingTime = userSub.endTime - block.timestamp;
+        }
+        require(remainingTime > 0, "No remaining time to refund");
+
+        uint256 refundAmount = (plan.price * remainingTime) / plan.duration;
+        require(refundAmount > 0, "Refund amount is 0");
+
+        // Cancel subscription
+        userSub.isActive = false;
+
+        // Transfer refund
+        payable(msg.sender).transfer(refundAmount);
+
+        emit SubscriptionCancelled(msg.sender, userSub.planId);
+    }
+
     function isSubscriptionActive(address _user) external view returns (bool) {
         UserSubscription memory userSub = userSubscriptions[_user];
         return userSub.isActive && block.timestamp < userSub.endTime;
