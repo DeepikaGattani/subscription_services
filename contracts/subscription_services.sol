@@ -359,7 +359,7 @@ contract Project {
         return planSubscribers;
     }
 
-    // ✅ New Function: Get total revenue from a specific plan
+    // ✅ Get total revenue from a specific plan
     function getPlanRevenue(uint256 _planId) external view onlyOwner returns (uint256 revenue) {
         require(_planId > 0 && _planId <= planCounter, "Invalid plan ID");
 
@@ -373,6 +373,14 @@ contract Project {
         }
 
         revenue = count * planPrice;
+    }
+
+    // ✅ New Function: Get average revenue per subscriber
+    function getAverageRevenuePerSubscriber() external view onlyOwner returns (uint256) {
+        if (subscribers.length == 0) {
+            return 0;
+        }
+        return totalRevenue / subscribers.length;
     }
 
     // Fallback to receive Ether
